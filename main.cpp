@@ -58,12 +58,13 @@ public:
         }
     }
     ~Network(){}
-    void learn(double *input, double *solution){
+    double *learn(double *input, double *solution){
         double *answer = solve(normalize(input));
         backpropagation(solution);
+        return answer;
     }
     double *solve(double *input) const {
-
+        return output[layers - 1];
     }
     double *normalize(double *input){
         double *norm = new double [neurons[0]];
