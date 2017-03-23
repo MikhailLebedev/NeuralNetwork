@@ -12,8 +12,10 @@
 #include <cstdlib>
 #include <ctime>
 
-#define DEF_MOMENT 1
-#define DEF_SPEED 1
+#define DEF_MOMENT 0.0001
+#define DEF_SPEED 0.01
+
+using namespace std;
 
 enum{
     OUT_L = 1,
@@ -31,6 +33,14 @@ double error(double *output, double *solution, int n){
 
 double sigmoid(double input){
     return 1 / (1 + exp(-input));
+}
+
+double *normalize(double *input, int n){
+        double *norm = new double [n];
+        for (int i = 0; i < n; ++i){
+            norm[i] = 1 / input[i];
+        }
+        return norm;
 }
 
 class Network{
@@ -57,8 +67,8 @@ public:
             weight[i] = new double* [neurons[i]];
             dweight[i] = new double* [neurons[i]];
             for (int j = 0; j < neurons[i]; ++j){
-                weight[i][j] = new double [neurons[j - 1]];
-                dweight[i][j] = new double [neurons[j - 1]];
+                weight[i][j] = new double [neurons[i - 1]];
+                dweight[i][j] = new double [neurons[i - 1]];
                 for (int k = 0; k < neurons[i - 1]; ++k){
                     weight[i][j][k] = 0.1 * rand() / (RAND_MAX + 1.0) + 0.1;
                     dweight[i][j][k] = 0;
@@ -85,9 +95,10 @@ public:
             delete[] output[i];
         }
         delete[] output;
+        delete[] neurons;
     }
     double *learn(double *input, double *solution){
-        double *norm = normalize(input);
+        double *norm = normalize(input, neurons[0]);
         double *answer = solve(norm);
         delete[] norm;
         backpropagation(solution);
@@ -95,6 +106,9 @@ public:
     }
     double *solve(double *input) const {
         double sum;
+        for (int i = 0; i < neurons[0]; ++i){
+            output[0][i] = input[i];
+        }
         for (int i = 1; i < layers; ++i){
             for (int j = 0; j < neurons[i]; ++j){
                 sum = 0;
@@ -105,13 +119,6 @@ public:
             }
         }
         return output[layers - 1];
-    }
-    double *normalize(double *input){
-        double *norm = new double [neurons[0]];
-        for (int i = 0; i < neurons[0]; ++i){
-            norm[i] = 1 / input[i];
-        }
-        return norm;
     }
     void backpropagation(double *solution){
         //current layer index
@@ -156,6 +163,13 @@ public:
 
 int main()
 {
-
+    int l = 3;
+    int n[l] = {2,10,3};
+    Network net(l, n);
+    double in[2] = {10.0, 228.0};
+    double *out;
+    out = net.solve(in);
+    cout << out[0] << endl << out[1] << endl << out[2] << endl;
+    delete[] out;
     return 0;
 }
