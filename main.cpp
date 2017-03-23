@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <sstream>
 #include <iterator>
+#include <fstream>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -80,22 +81,50 @@ public:
             output[i] = new double [neurons[i]];
         }
     }
-    ~Network(){
+    Network(const char *filename){
+        ifstream in(filename);
+        in >> layers;
+        neurons = new int [layers];
+        for (int i = 0; i < layers; ++i){
+            in >> neurons[i];
+        }
+        in >> moment >> speed;
+        weight = new double** [layers];
+        dweight = new double** [layers];
+        for (int i = 1; i < layers; ++i){
+            weight[i] = new double* [neurons[i]];
+            dweight[i] = new double* [neurons[i]];
+            for (int j = 0; j < neurons[i]; ++j){
+                weight[i][j] = new double [neurons[i - 1]];
+                dweight[i][j] = new double [neurons[i - 1]];
+                for (int k = 0; k < neurons[i - 1]; ++k){
+                    in >> weight[i][j][k];
+                    dweight[i][j][k] = 0;
+                }
+            }
+        }
+        output = new double* [layers];
+        for (int i = 0; i < layers; ++i){
+            output[i] = new double [neurons[i]];
+        }
+        in.close();
+    }
+    void save(const char *filename){
+        ofstream out(filename);
+        out << layers << endl;
+        for (int i = 0; i < layers; ++i){
+            out << neurons[i] << " ";
+        }
+        out << endl << moment << endl << speed << endl;
         for (int i = 1; i < layers; ++i){
             for (int j = 0; j < neurons[i]; ++j){
-                delete[] weight[i][j];
-                delete[] dweight[i][j];
+                for (int k = 0; k < neurons[i - 1]; ++k){
+                    out << weight[i][j][k] << " ";
+                }
+                out << endl;
             }
-            delete[] weight[i];
-            delete[] dweight[i];
         }
-        delete[] weight;
-        delete[] dweight;
-        for (int i = 0; i < layers; ++i){
-            delete[] output[i];
-        }
-        delete[] output;
-        delete[] neurons;
+        out.close();
     }
     double *learn(double *input, double *solution){
         double *norm = normalize(input, neurons[0]);
@@ -158,18 +187,37 @@ public:
         }
         delete[] delta;
     }
+    ~Network(){
+        for (int i = 1; i < layers; ++i){
+            for (int j = 0; j < neurons[i]; ++j){
+                delete[] weight[i][j];
+                delete[] dweight[i][j];
+            }
+            delete[] weight[i];
+            delete[] dweight[i];
+        }
+        delete[] weight;
+        delete[] dweight;
+        for (int i = 0; i < layers; ++i){
+            delete[] output[i];
+        }
+        delete[] output;
+        delete[] neurons;
+    }
 };
 
 
 int main()
 {
-    int l = 3;
-    int n[l] = {2,10,3};
-    Network net(l, n);
+    //int l = 3;
+    //int n[l] = {2,10,3};
+    //Network net(l, n);
+    Network net("net.txt");
     double in[2] = {10.0, 228.0};
     double *out;
     out = net.solve(in);
     cout << out[0] << endl << out[1] << endl << out[2] << endl;
     delete[] out;
+    //net.save("net.txt");
     return 0;
 }
