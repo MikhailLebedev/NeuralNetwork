@@ -9,6 +9,8 @@
 #include <iterator>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
+#include <ctime>
 
 #define DEF_MOMENT 1
 #define DEF_SPEED 1
@@ -31,14 +33,6 @@ double sigmoid(double input){
     return 1 / (1 + exp(-input));
 }
 
-double summ(double *signal, double *weight, int n){
-    double sum = 0;
-    for(int i = 0; i < n; ++i){
-        sum += signal[i] * weight[i];
-    }
-    return sum;
-}
-
 class Network{
     double ***weight;
     double ***dweight;
@@ -56,14 +50,60 @@ public:
         while(--l >= 0){
             neurons[l] = n[l];
         }
+        srand(time(NULL));
+        weight = new double** [layers];
+        dweight = new double** [layers];
+        for (int i = 1; i < layers; ++i){
+            weight[i] = new double* [neurons[i]];
+            dweight[i] = new double* [neurons[i]];
+            for (int j = 0; j < neurons[i]; ++j){
+                weight[i][j] = new double [neurons[j - 1]];
+                dweight[i][j] = new double [neurons[j - 1]];
+                for (int k = 0; k < neurons[i - 1]; ++k){
+                    weight[i][j][k] = 0.1 * rand() / (RAND_MAX + 1.0) + 0.1;
+                    dweight[i][j][k] = 0;
+                }
+            }
+        }
+        output = new double* [layers];
+        for (int i = 0; i < layers; ++i){
+            output[i] = new double [neurons[i]];
+        }
     }
-    ~Network(){}
+    ~Network(){
+        for (int i = 1; i < layers; ++i){
+            for (int j = 0; j < neurons[i]; ++j){
+                delete[] weight[i][j];
+                delete[] dweight[i][j];
+            }
+            delete[] weight[i];
+            delete[] dweight[i];
+        }
+        delete[] weight;
+        delete[] dweight;
+        for (int i = 0; i < layers; ++i){
+            delete[] output[i];
+        }
+        delete[] output;
+    }
     double *learn(double *input, double *solution){
-        double *answer = solve(normalize(input));
+        double *norm = normalize(input);
+        double *answer = solve(norm);
+        delete[] norm;
         backpropagation(solution);
         return answer;
     }
     double *solve(double *input) const {
+        double sum;
+        for (int i = 1; i < layers; ++i){
+            for (int j = 0; j < neurons[i]; ++j){
+                sum = 0;
+                for (int k = 0; k < neurons[i - 1]; ++k){
+                    sum += output[i - 1][k] * weight[i][j][k];
+                }
+                output[i][j] = sigmoid(sum);
+            }
+        }
         return output[layers - 1];
     }
     double *normalize(double *input){
@@ -100,7 +140,8 @@ public:
         while(++cli < layers){
             for (int i = 0; i < neurons[cli]; ++i){
                 for (int j = 0; j < neurons[cli - 1]; ++j){
-                    weight[cli][i][j] += moment * dweight[cli][i][j] + (1 - moment) * speed * delta[cli][i] * output[cli - 1][j];
+                    dweight[cli][i][j] = moment * dweight[cli][i][j] + (1 - moment) * speed * delta[cli][i] * output[cli - 1][j];
+                    weight[cli][i][j] += dweight[cli][i][j];
                 }
             }
         }
