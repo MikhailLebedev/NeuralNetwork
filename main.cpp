@@ -14,7 +14,7 @@
 #include <ctime>
 
 #define DEF_MOMENT 0.0001
-#define DEF_SPEED 0.01
+#define DEF_SPEED 0.0001
 
 using namespace std;
 
@@ -58,8 +58,8 @@ public:
         moment = m;
         speed = s;
         neurons = new int [layers];
-        while(--l >= 0){
-            neurons[l] = n[l];
+        for(int i = 0; i < layers; ++i){
+            neurons[i] = n[i];
         }
         srand(time(NULL));
         weight = new double** [layers];
@@ -71,7 +71,7 @@ public:
                 weight[i][j] = new double [neurons[i - 1]];
                 dweight[i][j] = new double [neurons[i - 1]];
                 for (int k = 0; k < neurons[i - 1]; ++k){
-                    weight[i][j][k] = 0.1 * rand() / (RAND_MAX + 1.0) + 0.1;
+                    weight[i][j][k] = 0.1 * rand() / (RAND_MAX + 1.0) + 0.5;
                     dweight[i][j][k] = 0;
                 }
             }
@@ -145,6 +145,7 @@ public:
                     sum += output[i - 1][k] * weight[i][j][k];
                 }
                 output[i][j] = sigmoid(sum);
+                cout << sum << endl;
             }
         }
         return output[layers - 1];
@@ -206,18 +207,39 @@ public:
     }
 };
 
+void teach(Network &net, const char *filename, const char *logname = "log.txt"){
+    ifstream in(filename);
+    ofstream log(logname);
+    int tests_amt, input_dim, output_dim;
+    in >> tests_amt >> input_dim >> output_dim;
+    double *input = new double [input_dim];
+    double *output = new double [output_dim];
+    double *out;
+    for (int i = 0; i < tests_amt; ++i){
+        for (int j = 0; j < input_dim; ++j){
+            in >> input[j]; 
+        }
+        for (int j = 0; j < output_dim; ++j){
+            in >> output[j];
+        }
+        out = net.learn(input, output);
+        log << error(out, output, output_dim) << endl;
+    }
+    log.close();
+    in.close();
+}
 
 int main()
 {
-    //int l = 3;
-    //int n[l] = {2,10,3};
-    //Network net(l, n);
-    Network net("net.txt");
-    double in[2] = {10.0, 228.0};
-    double *out;
-    out = net.solve(in);
-    cout << out[0] << endl << out[1] << endl << out[2] << endl;
-    delete[] out;
-    //net.save("net.txt");
+    int l = 4;
+    int n[l] = {2,3,2,1};
+    Network net(l, n);
+    teach(net, "tests.txt");
+    //Network net("net.txt");
+    //double in[2] = {10.0, 228.0};
+    //double *out;
+    //out = net.solve(in);
+    //cout << out[0] << endl << out[1] << endl << out[2] << endl;
+    net.save("net.txt");
     return 0;
 }
